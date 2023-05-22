@@ -5,6 +5,8 @@
 
 \<Figure 1\> Example of search results in KCI webpage
 
+![Figure 1](github_figures/image01.png)
+
  KCI가 제공하는 API는 총 다섯 가지이다. 인용지수 관련 두 가지와 논문 관련 세 가지가 있는데 논문 API에는 1) 논문 기본 정보, 2) 논문 상세 정보, 3) 참고문헌 정보가 있다. 여기서는 논문 API를 중심으로 다룬다. 우선 API를 활용하려면 [API 페이지](https://www.kci.go.kr/kciportal/po/openapi/openApiList.kci)에서 <OPEN API 키신청>을 통해 API 키를 발급받아야 한다. API 이용 신청서 작성을 통해 1주일 이내 승인이 이뤄진다. 발급받은 API 키 번호를 활용해 특정 논문의 기본 정보를 가져오는 URL 예시는 다음과 같다.<sup id="a1">[1](#f1)</sup>
 
 http://open.kci.go.kr/po/openapi/openApiSearch.kci?apiCode=articleSearch&key=12345678&displayCount=100&  
