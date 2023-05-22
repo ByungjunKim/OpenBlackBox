@@ -5,11 +5,12 @@
 
 \<Figure 1\> Example of search results in KCI webpage
 
- KCI가 제공하는 API는 총 다섯 가지이다. 인용지수 관련 두 가지와 논문 관련 세 가지가 있는데 논문 API에는 1) 논문 기본 정보, 2) 논문 상세 정보, 3) 참고문헌 정보가 있다. 여기서는 논문 API를 중심으로 다룬다. 우선 API를 활용하려면 [API 페이지](https://www.kci.go.kr/kciportal/po/openapi/openApiList.kci)에서 <OPEN API 키신청>을 통해 API 키를 발급받아야 한다. API 이용 신청서 작성을 통해 1주일 이내 승인이 이뤄진다. 발급받은 API 키 번호를 활용해 특정 논문의 기본 정보를 가져오는 URL 예시 다음과 같다.<sup id="a1">[1](#f1)</sup>
+ KCI가 제공하는 API는 총 다섯 가지이다. 인용지수 관련 두 가지와 논문 관련 세 가지가 있는데 논문 API에는 1) 논문 기본 정보, 2) 논문 상세 정보, 3) 참고문헌 정보가 있다. 여기서는 논문 API를 중심으로 다룬다. 우선 API를 활용하려면 [API 페이지](https://www.kci.go.kr/kciportal/po/openapi/openApiList.kci)에서 <OPEN API 키신청>을 통해 API 키를 발급받아야 한다. API 이용 신청서 작성을 통해 1주일 이내 승인이 이뤄진다. 발급받은 API 키 번호를 활용해 특정 논문의 기본 정보를 가져오는 URL 예시는 다음과 같다.<sup id="a1">[1](#f1)</sup>
 
-|Sample URL: http://open.kci.go.kr/po/openapi/openApiSearch.kci?apiCode=articleSearch&key=12345678&displayCount=100&id=ART002656945 | | |
-|:----|:----|:----|
+http://open.kci.go.kr/po/openapi/openApiSearch.kci?apiCode=articleSearch&key=12345678&displayCount=100&
+
 |Parameter|Value|Description|
+|:----|:----|:----|
 |apiCode|articleSearch|The name of API that requests basic information of articles|
 |key|12345678(example)|API Key|
 |displayCount|100|The number of requested papers per trial|
@@ -17,6 +18,7 @@
 
 위 예시 URL은 <Table 1>과 같이 정리할 수 있다. apiCode 파라미터는 연구자가 요청할 API의 종류를 뜻하는데 논문 기본정보의 값은 articleSearch이다. key 파라미터에는 자신의 API 키를 넣어야 한다. displayCount는 한 번에 요청할 수 있는 논문 수이며, 예를 들어 100이라고 기입하면 최대 100건의 논문이 검색된다. 위 예시에서는 id 파라미터에 특정 논문의 id를 추가했기 때문에 논문 한 건의 정보만 나온다. 위 파라미터 외에도 제목, 저자명, 저널 명 등의 다양한 파라미터를 활용해 여러 건의 논문 정보를 요청할 수 있다. API 요청 결과는 XML(Extensible Markup Language) 형태로 받아볼 수 있다. XML은 웹상에서 데이터를 쉽게 주고받을 수 있게 만든 마크업 언어이다. 태그(tag)와 요소(element)로 정보를 표현하며 파싱(parsing) 과정을 통해 연구자가 원하는 데이터를 추출 및 변형할 수 있다.<sup id="a2">[2](#f1)</sup>. 아래 예시(<Figure 3>)처럼 서지 내보내기에는 없었던 초록이나 참고문헌 정보를 API에서는 확인할 수 있다.
 
+만약 서지정보 내보내기로는 감당하기 어려운 분량의 데이터를 수집해야하거나, API를 다루기 어려울 때는 KCI에 직접 데이터를 요청할 수 있다. [데이터 신청 페이지](https://www.kci.go.kr/kciportal/po/openapi/openReqDataList.kci)에서 신청 양식에 자신이 원하는 데이터 조건(연도, 학술지, 학문 분류 등)을 상세히 적으면 네 가지 형태(논문 기본/상세/피인용/인용)의 엑셀파일(xls)을 받을 수 있다. 실제로 우리는 API 수집의 한계(일일 요청량 제한)로 한국연구재단에 데이터 제공을 여러 번 문의했으며, 그 결과 2022년 7월부터 데이터 직접 요청 서비스가 시작되었다.
 
 ### 2. KRI 연구자 정보 크롤링 과정
 
