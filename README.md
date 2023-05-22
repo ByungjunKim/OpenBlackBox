@@ -21,6 +21,8 @@ http://open.kci.go.kr/po/openapi/openApiSearch.kci?apiCode=articleSearch&key=123
 만약 서지정보 내보내기로는 감당하기 어려운 분량의 데이터를 수집해야하거나, API를 다루기 어려울 때는 KCI에 직접 데이터를 요청할 수 있다. [데이터 신청 페이지](https://www.kci.go.kr/kciportal/po/openapi/openReqDataList.kci)에서 신청 양식에 자신이 원하는 데이터 조건(연도, 학술지, 학문 분류 등)을 상세히 적으면 네 가지 형태(논문 기본/상세/피인용/인용)의 엑셀파일(xls)을 받을 수 있다. 실제로 우리는 API 수집의 한계(일일 요청량 제한)로 한국연구재단에 데이터 제공을 여러 번 문의했으며, 그 결과 2022년 7월부터 데이터 직접 요청 서비스가 시작되었다.
 
 ### 2. KRI 연구자 정보 크롤링 과정
+[KRI(한국연구자정보)](https://www.kri.go.kr/kri2) 웹크롤링 과정은 다음과 같다. 1) KCI 논문 상세페이지나 API 등을 활용해 논문 저자의 고유 id(예:CRT001954065) 확인, 2) 해당 저자 id를 바탕으로 KCI의 개인 연구자 정보 페이지로 이동 후, 국가연구자 번호 확인, 3) 해당 국가 연구자번호를 KRI 사이트에서 검색해서 인구사회학정보 수집. 예를 들어 김병준, 천정환의 [논문 페이지](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002647202) 
+에서 ‘김병준’을 클릭하면 해당 저자의 [연구자 정보 페이지](https://www.kci.go.kr/kciportal/po/citationindex/poCretDetail.kci?citationBean.cretId=CRT001954065)를 알 수 있다. 해당 페이지에서 ‘관심등록’ 버튼에 숨겨진 국가연구자 번호(1150****)를 확인할 수 있다. 해당 번호로 KRI 검색창에 성명과 국가연구자번호로 검색하면 성별, 생년, 최종학위 학교 등의 정보를 확인할 수 있다. 이 과정은 다양한 웹크롤링 패키지(Beautifulsoup4, Selenium 등)을 동원해야 하는 작업이라 앞선 과정들보다 복잡한 코드를 요한다.
 
 ### 3. OpenAlex 관련 구체적인 내용
 
