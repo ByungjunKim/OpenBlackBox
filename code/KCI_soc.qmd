@@ -1,0 +1,486 @@
+---
+title: "STM"
+---
+
+# STM
+
+라이브러리 로드
+
+```{r}
+library(tidyverse)
+library(stm)
+library(tm)
+library(stminsights)
+library(parallel)
+library(tidytext)
+library(tidylo)
+library(stringr)
+library(vroom)
+library(openxlsx)
+```
+
+### 데이터 전처리
+
+데이터 로드
+
+```{r}
+#기존 변수 삭제
+rm(tssci)
+rm(kci)
+rm(kci_ssci)
+rm(df)
+rm(df_K_rank)
+rm(df_K_rank_tssci)
+rm(df_ssci_kci)
+rm(df_ssci_tssci)
+```
+
+```{r}
+tssci <- tssci_socio
+kci <- kci_sociology
+kci_ssci <- kci_ssci_sociology
+```
+
+KCI와 TSSCI 데이터 합치기(rbind)
+
+```{r}
+# text 컬럼 생성 = title + abstract
+tssci$text <- str_c(tssci$title,' ',tssci$abstract)
+```
+
+```{r}
+# 필요한 컬럼만 선택
+tssci <- tssci %>% select(year,text)
+```
+
+```{r}
+# country 컬럼 추가
+tssci$index <- 'tssci'
+kci$index <- 'kci'
+```
+
+```{r}
+# 컬럼이름 통일
+kci_ssci <- kci_ssci %>% rename(year=pub_year)
+kci_ssci <- kci_ssci %>% rename(index=country)
+```
+
+```{r}
+df <- bind_rows(kci_ssci,tssci)
+```
+
+```{r}
+df
+```
+
+```{r}
+# 2004~2021 게재된 논문 활용
+df <- df %>% filter(year>=2004)
+df <- df %>% filter(year<=2021)
+
+# 날짜순 정렬(오름차순)
+df <- df %>% arrange(year)
+```
+
+```{r}
+df
+```
+
+모델링전 2개씩 짝지어서 df 생성
+
+```{r}
+df_ssci_kci <- df %>% filter(index %in% c('ssci','kci'))
+df_ssci_tssci <- df %>% filter(index %in% c('ssci','tssci'))
+```
+
+```{r}
+# index 명목변수화
+df_ssci_kci$index <- as.factor(df_ssci_kci$index)
+df_ssci_tssci$index <- as.factor(df_ssci_tssci$index)
+```
+
+```{r}
+df_ssci_kci
+```
+
+데이터 기술 통계량 확인
+
+```{r}
+summary(df_ssci_kci)
+```
+
+```{r}
+summary(df_ssci_tssci)
+```
+
+### 토크나이징
+
+https://cran.r-project.org/web/packages/spacyr/vignettes/using_spacyr.html
+
+불용어
+
+```{r}
+custom_stopwords <- c(
+'article','study','isbn','press','research','book','pp','eds','chapter','vol','acknowledgements','acknowledgments','paper','bibliography', 'appendix', 'preface', 'references', 'introduction', 'index', 'notes', 'conclusion', 'review','http','et','al','doi',"edited", "volume", "chapters", "editor","editors"
+)
+```
+
+df_ssci_kci
+
+```{r}
+myprocess_ks <- textProcessor(df_ssci_kci$text, 
+                              metadata = df_ssci_kci,
+                              wordLengths = c(2,Inf), 
+                              lowercase = T, 
+                              removenumbers = T, 
+                              removepunctuation = T, 
+                              removestopwords = T, 
+                              stem=T, 
+                              customstopwords = custom_stopwords)
+```
+
+```{r}
+saveRDS(myprocess_ks, file = '../myprocess/myprocess_ks.rds')
+```
+
+```{r}
+myprocess_ks
+```
+
+삭제된 단어수 확인
+
+```{r}
+length(myprocess_ks$docs.removed)
+```
+
+(추가) Threshold 정하기
+
+```{r}
+plotRemoved(myprocess_ks$documents, lower.thresh = seq(1,1000, by=200))
+```
+
+```{r}
+plotRemoved(myprocess_ks$documents, lower.thresh = seq(1,500, by=50))
+```
+
+```{r}
+plotRemoved(myprocess_ks$documents, lower.thresh = seq(1,300, by=20))
+```
+
+```{r}
+#threshold png 저장
+setwd("./output_threshold_png")
+
+png(filename="threshold_ks.png",width=3000,height=2000,unit="px",bg="white",res=500,pointsize=8)
+
+set.seed(1)
+plotRemoved(myprocess_ks$documents, lower.thresh = seq(1,300, by=20))
+dev.off()
+```
+
+```{r}
+# N개 이상의 문서에서 등장한 단어만 사용(lower.thresh)
+out_ks <- prepDocuments(myprocess_ks$documents, myprocess_ks$vocab, myprocess_ks$meta, lower.thresh = 100)
+```
+
+```{r}
+saveRDS(out_ks, file = '../RESULT/out_ks_100.rds')
+```
+
+```{r}
+out_ks <- out_ks_100
+```
+
+### 모델링
+
+최적 토픽갯수 확인
+
+```{r}
+# 오래걸림(리눅스/맥 환경에서만 멀티프로세싱 가능)
+model_searchK_ks <- searchK(out_ks$documents, out_ks$vocab, K = c(6:35),
+                                prevalence = ~s(year) + index,
+                                data = out_ks$meta, init.type="Spectral"
+                                  ,cores=detectCores()-1)
+saveRDS(model_searchK_ks,'model_searchK_ks.rds')
+```
+
+```{r}
+model_searchK_ks = model_searchK_ks_6_35
+```
+
+```{r}
+plot(model_searchK_ks)
+```
+
+```{r}
+# model_searchK_ks <- readRDS('model_searchK_ks.rds')
+model_searchK_ks # 9 (semantic coherence 기준)
+```
+
+```{r}
+#excl과 semcoh 비교 시각화
+
+model_searchK_ks$results %>%
+  select(K, exclus, semcoh) %>%
+  filter(K %in% c(6:35)) %>% #토픽 범위
+  unnest(cols = c(K, exclus, semcoh)) %>%
+  mutate(K = as.factor(K),KL=paste0('T',as.character(K))) %>% 
+  ggplot(aes(semcoh, exclus,label=KL)) +
+  geom_point(size = 1, alpha = 0.7) +
+  geom_text(check_overlap = T)+
+  labs(x = "Semantic coherence",
+       y = "Exclusivity",
+       title = "Comparing exclusivity and semantic coherence",
+       subtitle = "Models with fewer topics have higher semantic coherence for more topics, but lower exclusivity")
+```
+
+```{r}
+#exclus와 semcoh 연산, 절대값 산출
+df_K_rank = model_searchK_ks$results %>%
+  select(K, exclus, semcoh) %>%
+  filter(K %in% c(6:35)) %>%
+  unnest(cols = c(K, exclus, semcoh)) %>%
+  mutate(K = as.factor(K), exclus = as.numeric(exclus), semcoh = as.numeric(semcoh))
+  
+df_K_rank$result <- abs(df_K_rank$exclus * df_K_rank$semcoh)
+```
+
+```{r}
+#내림차순 정렬
+arrange(df_K_rank, desc(result))
+```
+
+##### 실제 모델링
+
+```{r}
+stm_model_ks_0419 <- stm(out_ks$documents, out_ks$vocab, K=15,
+              prevalence= ~s(year) + index,
+              data=out_ks$meta, init.type="Spectral",seed=2023,
+              verbose = F)
+saveRDS(stm_model_ks_0419,'stm_model_ks_0419.rds')
+```
+
+```{r}
+summary(stm_model_ks_0419)
+```
+
+```{r}
+# 토픽 별 highest prob 목록
+plot.STM(stm_model_ks_0419, type = "labels", width = 1200)
+```
+
+```{r}
+# STM 결과 df로 저장
+tmp = labelTopics(stm_model_ks_0419, n = 10)
+
+df_prob <- as.data.frame(tmp$prob)
+df_prob["topic_num"] <- as.numeric(1:nrow(df_prob))
+df_prob["index"] <- "prob"
+
+df_frex <- as.data.frame(tmp$frex)
+df_frex["topic_num"] <- as.numeric(1:nrow(df_prob))
+df_frex["index"] <- "frex"
+
+df_lift <- as.data.frame(tmp$lift)
+df_lift["topic_num"] <- as.numeric(1:nrow(df_prob))
+df_lift["index"] <- "lift"
+
+df_score <- as.data.frame(tmp$score)
+df_score["topic_num"] <- as.numeric(1:nrow(df_prob))
+df_score["index"] <- "score"
+
+df_stm_model_ks <- rbind(rbind(rbind(df_prob, df_frex), df_lift), df_score)
+df_stm_model_ks <- df_stm_model_ks %>%
+  relocate(c(topic_num, index)) %>% arrange(topic_num)
+
+# df를 excel로 저장
+write.xlsx(df_stm_model_ks, file = "./output_df_stm_model_xlsx/df_stm_model_ks.xlsx")
+```
+
+```{r}
+plot(stm_model_ks_0419,type='summary',labeltype = 'prob',n=10)
+```
+
+```{r}
+#summary png 저장
+setwd("./output_summary_png")
+
+png(filename="summary_ks.png",width=4000,height=2000,unit="px",bg="white",res=400,pointsize=8)
+
+set.seed(1)
+plot(stm_model_ks_0419,type='summary',labeltype = 'prob',n=10)
+dev.off()
+```
+
+주제별 단어 분포\
+참고 : https://bookdown.org/ahn_media/bookdown-demo/anal3topic.html
+
+```{r}
+td_beta_ks <- stm_model_ks_0419 %>% tidy(matrix = 'beta') 
+
+td_beta_ks %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  ungroup() %>% 
+  mutate(topic = str_c("주제", topic)) %>% 
+  
+  ggplot(aes(x = beta, 
+             y = reorder(term, beta),
+             fill = topic)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~topic, scales = "free") +
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "주제별 단어 확률 분포",
+       subtitle = "각 주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+in주제별 문서 분포
+
+```{r}
+td_gamma_ks <- stm_model_ks_0419 %>% tidy(matrix = "gamma") 
+td_gamma_ks %>% glimpse()
+```
+
+```{r}
+#문서별 토픽 비중
+df_gamma_ks = td_gamma_ks %>% pivot_wider(names_from = topic, values_from = gamma)
+df_gamma_ks
+```
+
+```{r}
+#문서 별 인덱스 추가
+df_gamma_ks['index'] = df_ssci_kci["index"]
+```
+
+```{r}
+# 문서 별  연도 추가
+df_gamma_ks['pub_year'] = df_ssci_kci['year']
+```
+
+```{r}
+# 컬럼명 변경 후 df 저장
+names(df_gamma_ks) <- c("document", "topic1", "topic2", "topic3", "topic4", "topic5", "topic6", "topic7", "topic8", "topic9", "topic10", "topic11", "topic12", "topic13", "topic14", "topic15", "index", "pub_year")
+write.csv(df_gamma_ks,file="df_gamma_ks.csv", row.names = FALSE)
+```
+
+```{r}
+summary(df_gamma_ks)
+```
+
+```{r}
+td_gamma_ks %>% 
+  mutate(max = max(gamma),
+         min = min(gamma),
+         median = median(gamma))
+```
+
+```{r}
+td_gamma_ks %>% 
+  ggplot(aes(x = gamma, fill = as.factor(topic))) +
+  geom_histogram(bins = 100, show.legend = F) +
+  facet_wrap(~topic) + 
+  labs(title = "주제별 문서 확률 분포",
+       y = "문서(기사)의 수", x = expression("문서 확률분포: "~(gamma))) +
+  theme(plot.title = element_text(size = 20))
+```
+
+##### 모델 효과 추정
+
+https://bookdown.org/ahn_media/bookdown-demo/anal4topic.html#%EC%A3%BC%EC%A0%9C-%EB%AA%85%EB%AA%85%EA%B3%BC-%EA%B3%B5%EB%B3%80%EC%9D%B8-%EC%A3%BC%EC%A0%9C%EB%AA%A8%ED%98%95
+
+```{r}
+m1_K_ks <- stm_model_ks_0419$settings$dim$K
+# stm_effect_model_ks <-  estimateEffect(1:m1_K_ks ~s(year)+index,
+#                                  stm_model_ks_0419, meta = out_ks$meta, uncertainty = "Global")
+# saveRDS(stm_effect_model_ks,'stm_effect_model_ks.rds')
+```
+
+```{r}
+summary(stm_effect_model_ks, topics= 1:m1_K_ks)
+```
+
+```{r}
+# 명목변수 효과 시각화
+plot.estimateEffect(stm_effect_model_ks,
+                    covariate = "index", 
+                    topics = c(1:m1_K_ks),
+                    method = "difference",
+                    model = stm_model_ks_0419, # to show labels alongside
+                    cov.value1 = "kci",
+                    cov.value2 = "ssci",
+                    xlab = "SSCI <------------> KCI",
+                    xlim = c(-.25, .25),
+                    labeltype = "custom",
+                    n = 5, 
+                    width = 100,
+                    verbose.labels = F,
+                    custom.labels = c('T1(***)','T2(***)', 'T3(***)', 'T4(***)', 'T5(***)', 'T6(***)', 'T7(***)', 'T8(***)', 'T9(***)', 'T10(***)', 'T11(***)', 'T12(***)', 'T13(***)', 'T14(***)', 'T15(***)'))
+```
+
+```{r}
+# effect png 저장
+setwd("./output_effect_png")
+
+png(filename="effect_ks.png",width=4000,height=2000,unit="px",bg="white",res=400,pointsize=8)
+
+set.seed(1)
+plot.estimateEffect(stm_effect_model_ks,
+                    covariate = "index", 
+                    topics = c(1:m1_K_ks),
+                    method = "difference",
+                    model = stm_model_ks_0419, # to show labels alongside
+                    cov.value1 = "kci",
+                    cov.value2 = "ssci",
+                    xlab = "SSCI <------------> KCI",
+                    xlim = c(-.25, .25),
+                    labeltype = "custom",
+                    n = 5, 
+                    width = 100,
+                    verbose.labels = F,
+                    custom.labels = c('T1(***)','T2(***)', 'T3(***)', 'T4(***)', 'T5(***)', 'T6(***)', 'T7(***)', 'T8(***)', 'T9(***)', 'T10(***)', 'T11(***)', 'T12(***)', 'T13(***)', 'T14(***)', 'T15(***)'))
+dev.off()
+```
+
+```{r}
+# 시계열 시각화(모든 토픽)
+plot.estimateEffect(stm_effect_model_ks,
+                    model=stm,
+                    covariate = "year", 
+                    topics = c(1:m1_K_ks),
+                    method = "continuous")
+```
+
+```{r}
+#### 시간에 따른 토픽 비율 변화 (토픽별로)
+stm_label<- labelTopics(stm_model_ks, n = 10)
+# stm_custom_label <- c('접종순서','거리두기 단계','국내 감염 상황','생활/문화/교육','관련연구/기술',
+#                                       '지원정책','관련주','백신 승인','미국 대선','경제 전망','정부/청와대',
+#                                       '해외 감염 상황','접종후속대책','변이 바이러스','국제협력','증상/전파','백신/치료제 개발','부작용')
+
+par(mfrow=c(3,3))
+j <- 1
+for (i in c(1:m1_K_ks))
+{
+  plot(stm_effect_model_ks, "year", method = "continuous", topics = i, printlegend = F,
+  # main = stm_custom_label[j], xaxt = "n")
+  #main = paste(paste0('T', i,':'),paste(stm_custom_label[i], collapse = ", "),sep=' '),
+  #xaxt ="n")
+  
+  # 토픽 이름대신 keyword로 표현하고 싶으면 아래 main 활용 
+  main =  paste('topic', i,paste(stm_label$frex[i,1:4], collapse = ", "),sep=' '))
+  
+  yearseq <- seq(from=as.Date('2004-01-01'), to=as.Date('2021-12-31'),by='year')
+yearnames <- year(yearseq)
+axis(1,at=as.numeric(yearseq) - min(as.numeric(yearseq)),labels=yearnames)
+  
+  j <- j+1
+
+}
+```
+
+```{r}
+# 토픽 네트워크
+# plot(topicCorr(stm_model),vlabels =stm_custom_label, vertex.label.cex = 0.55)
+plot(topicCorr(stm_model_ks), vertex.label.cex = 0.55)
+```
