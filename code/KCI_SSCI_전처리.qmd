@@ -1,0 +1,71 @@
+---
+title: "KCI_SSCI_TSSCI_전처리"
+---
+
+KCI+SSCI 데이터 불러오기
+
+```{r}
+getwd()
+```
+
+```{r}
+original <- vroom('../Data/topic_model_matrials_master_0226.csv')
+```
+
+```{r}
+#전처리 이후 예시
+kci_socio <- vroom('./Data/230313_kci_sociology.csv')
+kci_ssci_socio <- vroom('./Data/230313_kci_ssci_sociology.csv')
+```
+
+KCI + SSCI 학과별 추출, KCI 학과별 추출
+
+```{r}
+#경영학 데이터 추출
+kci_ssci_business <- select(original, pub_year, text, country, cate)
+kci_ssci_business <- filter(kci_ssci_business, cate == 'business')
+kci_ssci_business <- kci_ssci_business %>% select(pub_year, text, country)
+
+kci_business <- filter(kci_ssci_business, country == 'kci')
+kci_business <- kci_business %>% select(pub_year, text)
+```
+
+```{r}
+#경제학 데이터 추출
+kci_ssci_economics <- select(original, pub_year, text, country, cate)
+kci_ssci_economics <- filter(kci_ssci_economics, cate == 'economics')
+kci_ssci_economics <- kci_ssci_economics %>% select(pub_year, text, country)
+
+kci_economics <- filter(kci_ssci_economics, country == 'kci')
+kci_economics <- kci_economics %>% select(pub_year, text)
+```
+
+```{r}
+#정치학 데이터 추출
+kci_ssci_politics <- select(original, pub_year, text, country, cate)
+kci_ssci_politics <- filter(kci_ssci_politics, cate == 'politics')
+kci_ssci_politics <- kci_ssci_politics %>% select(pub_year, text, country)
+
+kci_politics <- filter(kci_ssci_politics, country == 'kci')
+kci_politics <- kci_politics %>% select(pub_year, text)
+```
+
+```{r}
+#지리학 데이터 추출
+kci_ssci_geography <- select(original, pub_year, text, country, cate)
+kci_ssci_geography <- filter(kci_ssci_geography, cate == 'geography')
+kci_ssci_geography <- kci_ssci_geography %>% select(pub_year, text, country)
+
+kci_geography <- filter(kci_ssci_geography, country == 'kci')
+kci_geography <- kci_geography %>% select(pub_year, text)
+```
+
+```{r}
+#사회학 데이터 추출
+kci_ssci_sociology <- select(original, pub_year, text, country, cate)
+kci_ssci_sociology <- filter(kci_ssci_sociology, cate == 'sociology')
+kci_ssci_sociology <- kci_ssci_sociology %>% select(pub_year, text, country)
+
+kci_sociology <- filter(kci_ssci_sociology, country == 'kci')
+kci_sociology <- kci_sociology %>% select(pub_year, text)
+```
