@@ -67,3 +67,6 @@ http://open.kci.go.kr/po/openapi/openApiSearch.kci?apiCode=articleSearch&key=123
 이재윤. 2021. “KCI 인문학과 사회과학 학술지의 다학문성과 학제성 분석: 일반 및 기타 분야를 중심으로” 『정보관리학회지』 38(2):227-250.  
 정유경. 2020. “국내 문헌정보학 분야 학술지의 인용 네트워크분석” 『한국문헌정보학회지』 54(4):221-238.  
 Kim, Byungjun. 2022. “Mapping the knowledge structure of Korean humanities : Bibliographic data analysis of humanities journal articles in the Korea citation index, 2004~2019.” 박사학위논문, 성균관대학교, 서울  
+
+### 분석 코드 및 데이터
+분석 코드 및 데이터는 code 폴더 아래 [code.md](https://github.com/ByungjunKim/OpenBlackBox/blob/main/code/code.md) 파일을 참고.
